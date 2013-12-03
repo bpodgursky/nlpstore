@@ -12,9 +12,8 @@ public class KnowledgeGraph {
 
   private Multimap<String, Node> labelToNodes = HashMultimap.create();
   private Multimap<String, RefNode> references = HashMultimap.create();
+  private Multimap<Node, RefNode> nodeToRefs = HashMultimap.create();
   private Set<Node> roots = Sets.newHashSet();
-
-
 
   public Collection<Node> getNodes(String label) {
     return labelToNodes.get(label);
@@ -30,6 +29,10 @@ public class KnowledgeGraph {
 
   public Multimap<String, RefNode> getReferences() {
     return references;
+  }
+
+  public Collection<RefNode> getRefNodesForHead(Node node){
+    return nodeToRefs.get(node);
   }
 
   public String toDotFile() {
@@ -85,8 +88,8 @@ public class KnowledgeGraph {
     target.addIncomingEdge(edge);
   }
 
-  public Node createNode(String token, String stem, String sentence) {
-    Node node = new Node(token, stem, sentence);
+  public Node createNode(String token, String stem, String sentence, int index) {
+    Node node = new Node(token, stem, sentence, index);
     labelToNodes.put(token, node);
     roots.add(node);
     return node;
@@ -97,6 +100,7 @@ public class KnowledgeGraph {
     ref.setEntity(entity);
     entity.addEdgeSet(new IdentityEdge(Sets.newHashSet(ref), IdentitySource.SEED));
 
+    nodeToRefs.put(ref.getHeadNode(), ref);
     references.put(ref.getText(), ref);
   }
 

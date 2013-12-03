@@ -1,8 +1,10 @@
 package com.bpodgursky.nlpstore.graph.query;
 
 import com.bpodgursky.nlpstore.graph.Edge;
+import com.bpodgursky.nlpstore.graph.Entity;
 import com.bpodgursky.nlpstore.graph.KnowledgeGraph;
 import com.bpodgursky.nlpstore.graph.Node;
+import com.bpodgursky.nlpstore.graph.RefNode;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -36,7 +38,7 @@ public class Querier {
   );
 
   private static final Set<String> IGNORED_QUESTION_CLAUSES = Sets.newHashSet(
-    "auxiliary"
+      "auxiliary"
   );
 
   public static List<QueryResult> match(KnowledgeGraph graph, Node questionRoot) {
@@ -44,7 +46,7 @@ public class Querier {
 
     for (Node root : graph.getRoots()) {
       Map<Node, Node> indefinites = Maps.newHashMap();
-      if(resolveNode(root, questionRoot, indefinites)){
+      if (resolveAllReferences(graph, root, questionRoot, indefinites)) {
         results.add(new QueryResult(indefinites, root));
       }
     }
@@ -52,29 +54,60 @@ public class Querier {
     return results;
   }
 
-  private static boolean resolveNode(Node data, Node query, Map<Node, Node> resolvedIndefinites) {
+  private static boolean resolveAllReferences(KnowledgeGraph graph,
+                                              Node data,
+                                              Node query,
+                                              Map<Node, Node> resolvedIndefinites) {
     LOG.debug("\n");
     LOG.debug("Comparing: ");
     LOG.debug(data.toString());
     LOG.debug(query.toString());
 
-    if (matchStem(data, query, resolvedIndefinites)) {
+    Set<Node> nodesToExplore = Sets.newLinkedHashSet(Lists.newArrayList(data));
+
+    //  get all nodes which refer to the same thing as the original node
+    for (RefNode refNode : graph.getRefNodesForHead(data)) {
+      Entity identity = refNode.getIdentity();
+      for (RefNode refNode1 : identity.getNodes()) {
+        nodesToExplore.add(refNode1.getHeadNode());
+      }
+    }
+
+    //  if any of the references match, consider it a success
+    for (Node toExplore : nodesToExplore) {
+      if(exploreNode(graph, toExplore, query, resolvedIndefinites)){
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private static boolean exploreNode(KnowledgeGraph graph,
+                                     Node toExplore,
+                                     Node query,
+                                     Map<Node, Node> resolvedIndefinites){
+    if (matchStem(toExplore, query, resolvedIndefinites)) {
       LOG.debug("Stems match");
       for (Edge edge : query.getOutgoingEdges()) {
-        if(!resolveEdge(edge, data.getOutgoingEdges(), resolvedIndefinites)){
-          LOG.debug("Cannot resolve edge stem: "+edge.getRelation());
+        if (!resolveEdge(graph, edge, toExplore.getOutgoingEdges(), resolvedIndefinites)) {
+          LOG.debug("Cannot resolve edge stem: " + edge.getRelation());
           return false;
         }
       }
       return true;
     }
+
     return false;
   }
 
-  private static boolean resolveEdge(Edge queryEdge, List<Edge> dataEdges, Map<Node, Node> resovledIndefinites){
+  private static boolean resolveEdge(KnowledgeGraph graph,
+                                     Edge queryEdge,
+                                     List<Edge> dataEdges,
+                                     Map<Node, Node> resovledIndefinites) {
 
     //  "did", "to", etc
-    if(IGNORED_QUESTION_CLAUSES.contains(queryEdge.getRelation())){
+    if (IGNORED_QUESTION_CLAUSES.contains(queryEdge.getRelation())) {
       return true;
     }
 
@@ -84,8 +117,8 @@ public class Querier {
       LOG.debug(dataEdge.getRelation());
       LOG.debug(queryEdge.getRelation());
 
-      if(matchEdge(dataEdge, queryEdge)){
-        if(resolveNode(dataEdge.getTarget(), queryEdge.getTarget(), resovledIndefinites)){
+      if (matchEdge(dataEdge, queryEdge)) {
+        if (resolveAllReferences(graph, dataEdge.getTarget(), queryEdge.getTarget(), resovledIndefinites)) {
 
           LOG.debug("Comparing in edge: ");
           LOG.debug(dataEdge.getTarget().toString());
@@ -105,16 +138,15 @@ public class Querier {
     COMPATIBLE_CLAUSES.put("direct object", "clausal complement");
     COMPATIBLE_CLAUSES.put("attributive", "nominal subject");
     COMPATIBLE_CLAUSES.put("adverbial modifier", "prepositional modifier");
-//    COMPATIBLE_CLAUSES.put("nominal subject", "nominal passive subject");
-//    COMPATIBLE_CLAUSES.put("relative clause modifier", "dependent");
+    COMPATIBLE_CLAUSES.put("dependent", "prepositional modifier");
   }
 
-  private static boolean matchEdge(Edge dataEdge,  Edge queryEdge){
-    if(dataEdge.getRelation().equals(queryEdge.getRelation())){
+  private static boolean matchEdge(Edge dataEdge, Edge queryEdge) {
+    if (dataEdge.getRelation().equals(queryEdge.getRelation())) {
       return true;
     }
 
-    if(COMPATIBLE_CLAUSES.containsEntry(queryEdge.getRelation(), dataEdge.getRelation())){
+    if (COMPATIBLE_CLAUSES.containsEntry(queryEdge.getRelation(), dataEdge.getRelation())) {
       return true;
     }
 

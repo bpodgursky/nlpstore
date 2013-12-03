@@ -6,20 +6,24 @@ public class RefNode {
 
   private final String text;
   private final String sentence;
-  private final List<Node> references;
+  private final Node headNode;
   private final int id;
 
   private Entity identity;
 
-  public RefNode(String text, String sentence, List<Node> references) {
+  public RefNode(String text, String sentence, Node headNode) {
     this.id = NodeCounter.getId();
     this.text = text;
     this.sentence = sentence;
-    this.references = references;
+    this.headNode = headNode;
   }
 
   public int getId() {
     return id;
+  }
+
+  public Node getHeadNode() {
+    return headNode;
   }
 
   public String getSentence() {
@@ -39,14 +43,17 @@ public class RefNode {
   }
 
   public List<Node> getReferences() {
-    return references;
+    return Node.collectChildren(headNode);
   }
 
   @Override
   public String toString() {
     return "RefNode{" +
         "text='" + text + '\'' +
-        ", references=" + references +
+        ", sentence='" + sentence + '\'' +
+        ", headNode=" + headNode +
+        ", id=" + id +
+        ", identity=" + identity +
         '}';
   }
 }

@@ -1,8 +1,11 @@
 package com.bpodgursky.nlpstore.graph;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import org.apache.commons.lang.StringUtils;
 
 import java.util.List;
+import java.util.Map;
 
 public class Node {
 
@@ -12,18 +15,25 @@ public class Node {
   private final List<Edge> incomingEdges = Lists.newArrayList();
   private final List<Edge> outgoingEdges = Lists.newArrayList();
 
+  private final Integer index;
+
   private final int id;
 
-  public Node(String token, String stem, String sentenceRef) {
+  public Node(String token, String stem, String sentenceRef, Integer index) {
     id = NodeCounter.getId();
 
     this.token = token;
     this.stem = stem;
     this.sentenceRef = sentenceRef;
+    this.index = index;
   }
 
   public String getToken() {
     return token;
+  }
+
+  public Integer getIndex() {
+    return index;
   }
 
   public String getSentenceRef() {
@@ -71,7 +81,7 @@ public class Node {
     StringBuilder builder = new StringBuilder();
     builder.append("digraph G {");
 
-    for (Node node : collectNodes(root)) {
+    for (Node node : collectChildren(root)) {
       builder.append(node.getId()).append(" ").append("[label=\"").append(node.getToken()).append("\"];\n");
 
       for (Edge edge : node.getOutgoingEdges()) {
@@ -88,13 +98,30 @@ public class Node {
     return builder.toString();
   }
 
-  private static List<Node> collectNodes(Node node){
+  public static List<Node> collectChildren(Node node){
     List<Node> nodes = Lists.newArrayList();
     for (Edge edge : node.getOutgoingEdges()) {
-      nodes.addAll(collectNodes(edge.getTarget()));
+      nodes.addAll(collectChildren(edge.getTarget()));
     }
     nodes.add(node);
     return nodes;
+  }
+
+  public static String getSentencePart(Node node) {
+
+    Map<Integer, String> children = Maps.newTreeMap();
+    getChildren(node, children);
+
+    return StringUtils.join(Lists.newArrayList(children.values()), " ");
+  }
+
+  private static void getChildren(Node node, Map<Integer, String> children) {
+
+    for (Edge edge : node.getOutgoingEdges()) {
+      getChildren(edge.getTarget(), children);
+    }
+
+    children.put(node.getIndex(), node.getToken());
   }
 
 }
