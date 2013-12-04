@@ -1,33 +1,36 @@
 package com.bpodgursky.nlpstore.graph.query;
 
-import com.bpodgursky.nlpstore.graph.Entity;
 import com.bpodgursky.nlpstore.graph.KnowledgeGraph;
 import com.bpodgursky.nlpstore.graph.NlpParser;
 import com.bpodgursky.nlpstore.graph.Node;
-import com.bpodgursky.nlpstore.graph.RefNode;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestQuerier {
+
+  private NodeComparator comparator;
+
+  @Before
+  public void setUp() throws Exception {
+    comparator = new ThesarusComparator();
+  }
 
   @Test
   public void testQuery() throws Exception {
@@ -61,7 +64,6 @@ public class TestQuerier {
     fw.append(dot);
     fw.close();
 
-    //  TODO synonyms
     //  TODO prune out relative clause modifiers (others)?  "The Monroe Doctrine was a policy of the United States introduced on December 2, 1823. "
     //    to "The Monroe Doctrine was introduced on December 2, 1823.
     //  TODO: sentence rearranging
@@ -76,22 +78,22 @@ public class TestQuerier {
     //    "What was The Monroe Doctrine?"
 
 
-    Set<Entity> entities = Sets.newHashSet();
-    for (RefNode node : graph.getReferences().values()) {
-      entities.add(node.getIdentity());
-    }
-
-    System.out.println();
-    for (Entity entity : entities) {
-      System.out.println();
-      for (RefNode node : entity.getNodes()) {
-        System.out.println(Node.getSentencePart(node.getHeadNode()));
-      }
-    }
+//    Set<Entity> entities = Sets.newHashSet();
+//    for (RefNode node : graph.getReferences().values()) {
+//      entities.add(node.getIdentity());
+//    }
+//
+//    System.out.println();
+//    for (Entity entity : entities) {
+//      System.out.println();
+//      for (RefNode node : entity.getNodes()) {
+//        System.out.println(Node.getSentencePart(node.getHeadNode()));
+//      }
+//    }
 
     verifyAnswers(graph, parser.parse("The doctrine noted what?"),
         Collections.singletonMap(
-            "What",
+            "what",
             "that the United States would neither interfere with existing European colonies"
         )
     );
@@ -99,11 +101,24 @@ public class TestQuerier {
     verifyAnswers(graph, parser.parse("When was the doctrine issued?"),
         Collections.singletonMap(
             "When",
-            "at a time when nearly all Latin American colonies of Spain and Portugal had achieved or were at the point of gaining independence from the Portuguese Empire and Spanish Empire; Peru and Bolivia would become independent in 1825, leaving only Cuba and Puerto Rico under Spanish rule"
+            "at a time when nearly all Latin American colonies of Spain and Portugal had achieved or were at the point of gaining independence from the Portuguese Empire and Spanish Empire"
+        )
+    );
+    verifyAnswers(graph, parser.parse("When was the doctrine published?"),
+        Collections.singletonMap(
+            "When",
+            "at a time when nearly all Latin American colonies of Spain and Portugal had achieved or were at the point of gaining independence from the Portuguese Empire and Spanish Empire"
         )
     );
 
     verifyAnswers(graph, parser.parse("What did the Monroe doctrine assert?"),
+        Collections.singletonMap(
+            "What",
+            "that the New World and the Old World were to remain distinctly separate spheres of influence for they were composed of entirely separate and independent nations"
+        )
+    );
+
+    verifyAnswers(graph, parser.parse("What did the Monroe doctrine affirm?"),
         Collections.singletonMap(
             "What",
             "that the New World and the Old World were to remain distinctly separate spheres of influence for they were composed of entirely separate and independent nations"
@@ -142,7 +157,7 @@ public class TestQuerier {
 
   private void verifyAnswers(KnowledgeGraph data,
                              Node questionRoot,
-                             Map<String, String> answer) throws IOException {
+                             Map<String, String> answer) throws Exception {
     //noinspection unchecked
     verifyAnswers(data, questionRoot, Lists.newArrayList(answer));
   }
@@ -151,13 +166,15 @@ public class TestQuerier {
 
   private void verifyAnswers(KnowledgeGraph data,
                              Node questionRoot,
-                             List<Map<String, String>> answers) throws IOException {
+                             List<Map<String, String>> answers) throws Exception {
 
     FileWriter fw = new FileWriter("question-" + (i++) + ".dot");
     fw.append(Node.toJson(questionRoot));
     fw.close();
 
-    List<QueryResult> matches = Querier.match(data, questionRoot);
+    GraphQuerier querier = new GraphQuerier(data, comparator);
+
+    List<QueryResult> matches = querier.match(questionRoot);
     Collection<Map<String, String>> answerText = Collections2.transform(matches, new Function<QueryResult, Map<String, String>>() {
       @Override
       public Map<String, String> apply(QueryResult input) {

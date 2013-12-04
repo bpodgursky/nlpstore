@@ -88,8 +88,8 @@ public class KnowledgeGraph {
     target.addIncomingEdge(edge);
   }
 
-  public Node createNode(String token, String stem, String sentence, int index) {
-    Node node = new Node(token, stem, sentence, index);
+  public Node createNode(String token, String stem, String pos, String sentence, int index) {
+    Node node = new Node(token, stem, pos, sentence, index);
     labelToNodes.put(token, node);
     roots.add(node);
     return node;

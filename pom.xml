@@ -72,5 +72,23 @@
       <version>1.7.5</version>
     </dependency>
 
+    <dependency>
+      <groupId>net.sf.extjwnl</groupId>
+      <artifactId>extjwnl</artifactId>
+      <version>1.6.10</version>
+    </dependency>
+
   </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources/</directory>
+        <includes>
+          <include>**/*.xml</include>
+        </includes>
+      </resource>
+    </resources>
+  </build>
+
 </project>

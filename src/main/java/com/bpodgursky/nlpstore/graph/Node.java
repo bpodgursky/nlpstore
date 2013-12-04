@@ -11,6 +11,7 @@ public class Node {
 
   private final String token;
   private final String stem;
+  private final String pos;
   private final String sentenceRef;
   private final List<Edge> incomingEdges = Lists.newArrayList();
   private final List<Edge> outgoingEdges = Lists.newArrayList();
@@ -19,11 +20,12 @@ public class Node {
 
   private final int id;
 
-  public Node(String token, String stem, String sentenceRef, Integer index) {
+  public Node(String token, String stem, String pos, String sentenceRef, Integer index) {
     id = NodeCounter.getId();
 
     this.token = token;
     this.stem = stem;
+    this.pos = pos;
     this.sentenceRef = sentenceRef;
     this.index = index;
   }
@@ -54,6 +56,10 @@ public class Node {
 
   public int getId() {
     return id;
+  }
+
+  public String getPos() {
+    return pos;
   }
 
   protected void addIncomingEdge(Edge edge){

@@ -7,6 +7,7 @@ import edu.stanford.nlp.dcoref.CorefChain.CorefMention;
 import edu.stanford.nlp.dcoref.CorefCoreAnnotations;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.PartOfSpeechAnnotation;
 import edu.stanford.nlp.ling.IndexedWord;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
@@ -56,7 +57,9 @@ public class NlpParser {
 
     for (IndexedWord vertex : semanticGraph.vertexSet()) {
       String s = vertex.get(LemmaAnnotation.class);
-      nodesByWord.put(vertex, new Node(vertex.word(), s, sentenceText, vertex.index()));
+      String pos = vertex.get(PartOfSpeechAnnotation.class);
+
+      nodesByWord.put(vertex, new Node(vertex.word(), s, pos, sentenceText, vertex.index()));
     }
 
     for (SemanticGraphEdge edge : semanticGraph.getEdgeSet()) {
@@ -106,8 +109,9 @@ public class NlpParser {
 
       for (IndexedWord vertex : semanticGraph.vertexSet()) {
         String s = vertex.get(LemmaAnnotation.class);
+        String pos = vertex.get(PartOfSpeechAnnotation.class);
 
-        Node node = graph.createNode(vertex.word(), s, sentenceText, vertex.index());
+        Node node = graph.createNode(vertex.word(), s, pos, sentenceText, vertex.index());
         nodes.put(vertex, node);
 
         nodesByIndexBySentence.get(sentenceIndex).put(vertex.index(), node);

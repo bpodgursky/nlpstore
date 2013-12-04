@@ -17,8 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class Querier {
-  private static final Logger LOG = LoggerFactory.getLogger(Querier.class);
+public class GraphQuerier {
+  private static final Logger LOG = LoggerFactory.getLogger(GraphQuerier.class);
 
   private static final Set<String> QUESTION_STEMS = Sets.newHashSet(
       "WHO",
@@ -41,12 +41,20 @@ public class Querier {
       "auxiliary"
   );
 
-  public static List<QueryResult> match(KnowledgeGraph graph, Node questionRoot) {
+  private final KnowledgeGraph graph;
+  private final NodeComparator nodeComparator;
+
+  public GraphQuerier(KnowledgeGraph graph, NodeComparator comparator) {
+    this.graph = graph;
+    this.nodeComparator = comparator;
+  }
+
+  public List<QueryResult> match(Node questionRoot) throws Exception {
     List<QueryResult> results = Lists.newArrayList();
 
     for (Node root : graph.getRoots()) {
       Map<Node, Node> indefinites = Maps.newHashMap();
-      if (resolveAllReferences(graph, root, questionRoot, indefinites)) {
+      if (resolveAllReferences(root, questionRoot, indefinites)) {
         results.add(new QueryResult(indefinites, root));
       }
     }
@@ -54,10 +62,9 @@ public class Querier {
     return results;
   }
 
-  private static boolean resolveAllReferences(KnowledgeGraph graph,
-                                              Node data,
-                                              Node query,
-                                              Map<Node, Node> resolvedIndefinites) {
+  private boolean resolveAllReferences(Node data,
+                                       Node query,
+                                       Map<Node, Node> resolvedIndefinites) throws Exception {
     LOG.debug("\n");
     LOG.debug("Comparing: ");
     LOG.debug(data.toString());
@@ -75,7 +82,7 @@ public class Querier {
 
     //  if any of the references match, consider it a success
     for (Node toExplore : nodesToExplore) {
-      if(exploreNode(graph, toExplore, query, resolvedIndefinites)){
+      if (exploreNode(toExplore, query, resolvedIndefinites)) {
         return true;
       }
     }
@@ -83,14 +90,13 @@ public class Querier {
     return false;
   }
 
-  private static boolean exploreNode(KnowledgeGraph graph,
-                                     Node toExplore,
-                                     Node query,
-                                     Map<Node, Node> resolvedIndefinites){
+  private boolean exploreNode(Node toExplore,
+                              Node query,
+                              Map<Node, Node> resolvedIndefinites) throws Exception {
     if (matchStem(toExplore, query, resolvedIndefinites)) {
       LOG.debug("Stems match");
       for (Edge edge : query.getOutgoingEdges()) {
-        if (!resolveEdge(graph, edge, toExplore.getOutgoingEdges(), resolvedIndefinites)) {
+        if (!resolveEdge(edge, toExplore.getOutgoingEdges(), resolvedIndefinites)) {
           LOG.debug("Cannot resolve edge stem: " + edge.getRelation());
           return false;
         }
@@ -101,10 +107,9 @@ public class Querier {
     return false;
   }
 
-  private static boolean resolveEdge(KnowledgeGraph graph,
-                                     Edge queryEdge,
-                                     List<Edge> dataEdges,
-                                     Map<Node, Node> resovledIndefinites) {
+  private boolean resolveEdge(Edge queryEdge,
+                              List<Edge> dataEdges,
+                              Map<Node, Node> resolvedIndefinites) throws Exception {
 
     //  "did", "to", etc
     if (IGNORED_QUESTION_CLAUSES.contains(queryEdge.getRelation())) {
@@ -118,7 +123,9 @@ public class Querier {
       LOG.debug(queryEdge.getRelation());
 
       if (matchEdge(dataEdge, queryEdge)) {
-        if (resolveAllReferences(graph, dataEdge.getTarget(), queryEdge.getTarget(), resovledIndefinites)) {
+        if (resolveAllReferences(dataEdge.getTarget(),
+            queryEdge.getTarget(),
+            resolvedIndefinites)) {
 
           LOG.debug("Comparing in edge: ");
           LOG.debug(dataEdge.getTarget().toString());
@@ -153,13 +160,15 @@ public class Querier {
     return false;
   }
 
-  private static boolean matchStem(Node data, Node query, Map<Node, Node> resolvedIndefinites) {
+  private boolean matchStem(Node data,
+                            Node query,
+                            Map<Node, Node> resolvedIndefinites) throws Exception {
 
     if (QUESTION_STEMS.contains(query.getStem().toUpperCase())) {
       resolvedIndefinites.put(query, data);
       return true;
     }
 
-    return data.getStem().toUpperCase().equals(query.getStem().toUpperCase());
+    return nodeComparator.match(data, query);
   }
 }
