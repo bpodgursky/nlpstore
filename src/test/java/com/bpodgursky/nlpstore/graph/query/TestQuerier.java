@@ -64,8 +64,6 @@ public class TestQuerier {
     fw.append(dot);
     fw.close();
 
-    //  TODO prune out relative clause modifiers (others)?  "The Monroe Doctrine was a policy of the United States introduced on December 2, 1823. "
-    //    to "The Monroe Doctrine was introduced on December 2, 1823.
     //  TODO: sentence rearranging
     //    "What did the United States want to guarantee?" ("What" vs "What did" seems problematic)
     //  TODO: passive / active restructuring
@@ -74,27 +72,18 @@ public class TestQuerier {
     //    "When was the term \"Monroe Doctrine\" coined?"
     //    "In what year was the term Monroe Doctrine coined?"
     //    "When was the term Monroe Doctrine coined?"
-    //  TODO: existence verb weirdness
-    //    "What was The Monroe Doctrine?"
-
-
-//    Set<Entity> entities = Sets.newHashSet();
-//    for (RefNode node : graph.getReferences().values()) {
-//      entities.add(node.getIdentity());
-//    }
-//
-//    System.out.println();
-//    for (Entity entity : entities) {
-//      System.out.println();
-//      for (RefNode node : entity.getNodes()) {
-//        System.out.println(Node.getSentencePart(node.getHeadNode()));
-//      }
-//    }
 
     verifyAnswers(graph, parser.parse("The doctrine noted what?"),
         Collections.singletonMap(
             "what",
             "that the United States would neither interfere with existing European colonies"
+        )
+    );
+
+    verifyAnswers(graph, parser.parse("What was the Monroe Doctrine?"),
+        Collections.singletonMap(
+            "What was the Monroe Doctrine",
+            "The Monroe Doctrine was a policy of the United States introduced on December 2 1823"
         )
     );
 
@@ -180,7 +169,7 @@ public class TestQuerier {
       public Map<String, String> apply(QueryResult input) {
         Map<String, String> results = Maps.newHashMap();
         for (Entry<Node, Node> entry : input.getResolvedIndefinites().entrySet()) {
-          results.put(Node.getSentencePart(entry.getKey()), Node.getSentencePart(entry.getValue()));
+          results.put(Node.getSentencePart(entry.getKey()).toLowerCase(), Node.getSentencePart(entry.getValue()));
         }
         return results;
       }
@@ -197,13 +186,23 @@ public class TestQuerier {
       }
     }
 
+
+    Collection<Map<String, String>> lowercased = Collections2.transform(answers, new Function<Map<String, String>, Map<String, String>>() {
+      @Override
+      public Map<String, String> apply(Map<String, String> input) {
+        Map<String, String> lowercased = Maps.newHashMap();
+        for (Entry<String, String> entry : input.entrySet()) {
+          lowercased.put(entry.getKey().toLowerCase(), entry.getValue());
+        }
+        return lowercased;
+      }
+    });
+
     for (Map<String, String> results : answerText) {
-      assertTrue(answers.contains(results));
+      assertTrue(lowercased.contains(results));
     }
 
     assertEquals(answers.size(), answerText.size());
 
   }
-
-  //  TODO assert
 }
