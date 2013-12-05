@@ -84,8 +84,6 @@ public class TestQuerier {
     fw.append(dot);
     fw.close();
 
-    //  TODO: passive / active restructuring
-    //    "Who invoked it?"
     //  TODO: time...
     //    "When was the term \"Monroe Doctrine\" coined?"
     //    "In what year was the term Monroe Doctrine coined?"
