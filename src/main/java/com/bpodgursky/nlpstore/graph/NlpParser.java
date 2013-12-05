@@ -31,8 +31,6 @@ public class NlpParser {
   public NlpParser() {
     Properties props = new Properties();
     props.put("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
-//    props.put("makeCopulaHead", true);
-//    props.put("retainTmpSubcategories", true);
     pipeline = new StanfordCoreNLP(props);
   }
 

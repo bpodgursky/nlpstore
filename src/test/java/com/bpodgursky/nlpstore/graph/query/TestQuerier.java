@@ -19,17 +19,41 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestQuerier {
 
+  static {
+    BasicConfigurator.configure();
+    Logger.getLogger("com.bpodgursky").setLevel(Level.DEBUG);
+  }
+
   private NodeComparator comparator;
+  private NlpParser parser;
 
   @Before
   public void setUp() throws Exception {
     comparator = new ThesarusComparator();
+    parser = new NlpParser();
+  }
+
+  @Test
+  public void testPassive() throws Exception {
+
+    String text = "Tom was given a bag";
+
+    KnowledgeGraph graph = new KnowledgeGraph();
+    parser.process(text, graph);
+
+    verifyAnswers(graph, parser.parse("Who was given a bag?"),
+        Collections.singletonMap(
+            "who",
+            "Tom"
+        )
+    );
   }
 
   @Test
@@ -38,7 +62,7 @@ public class TestQuerier {
     String text =
         "The Monroe Doctrine was a policy of the United States introduced on December 2, 1823. " +
             "It stated that further efforts by European nations to colonize land or interfere with states in North or South America would be viewed as acts of aggression, requiring U.S. intervention. " +
-            "At the same time, the doctrine noted that the United States would neither interfere with existing European colonies nor meddle in the internal concerns of European countries. " +
+            "At the same time, the doctrine said that the United States would neither interfere with existing European colonies nor meddle in the internal concerns of European countries. " +
             "The Doctrine was issued at a time when nearly all Latin American colonies of Spain and Portugal had achieved or were at the point of gaining independence from the Portuguese Empire and Spanish Empire; Peru and Bolivia would become independent in 1825, leaving only Cuba and Puerto Rico under Spanish rule. " +
             "The United States, working in agreement with Britain, wanted to guarantee that no European power would move into the Americas. " +
             "President James Monroe first stated the doctrine during his seventh annual State of the Union Address to Congress. " +
@@ -51,12 +75,8 @@ public class TestQuerier {
             "However, the policy became deeply resented by Latin American nations for its overt interventionism and perceived imperialism, and in November 2013, Secretary of State John Kerry declared that \"The era of the Monroe Doctrine is over.\" " +
             "";
 
-    BasicConfigurator.configure();
-    Logger.getLogger("com.bpodgursky").setLevel(Level.INFO);
 
     KnowledgeGraph graph = new KnowledgeGraph();
-
-    NlpParser parser = new NlpParser();
     parser.process(text, graph);
 
     String dot = graph.toDotFile();
@@ -64,8 +84,6 @@ public class TestQuerier {
     fw.append(dot);
     fw.close();
 
-    //  TODO: sentence rearranging
-    //    "What did the United States want to guarantee?" ("What" vs "What did" seems problematic)
     //  TODO: passive / active restructuring
     //    "Who invoked it?"
     //  TODO: time...
@@ -73,10 +91,31 @@ public class TestQuerier {
     //    "In what year was the term Monroe Doctrine coined?"
     //    "When was the term Monroe Doctrine coined?"
 
-    verifyAnswers(graph, parser.parse("The doctrine noted what?"),
+
+    verifyAnswers(graph, parser.parse("Who would invoke it?"),
         Collections.singletonMap(
-            "what",
-            "that the United States would neither interfere with existing European colonies"
+            "who",
+            "many U.S. statesmen and several U.S. presidents"
+        )
+    );
+
+    verifyAnswers(graph, parser.parse("What did the doctrine say?"),
+        Lists.newArrayList(
+            Collections.singletonMap("what",
+                "that the United States would neither interfere with existing European colonies"
+            ),
+            Collections.singletonMap("what",
+                "that further efforts by European nations to colonize land or interfere with states in North or South America would be viewed as acts of aggression")
+        )
+    );
+
+    verifyAnswers(graph, parser.parse("The doctrine stated what?"),
+        Lists.newArrayList(
+            Collections.singletonMap("what",
+                "that the United States would neither interfere with existing European colonies"
+            ),
+            Collections.singletonMap("what",
+                "that further efforts by European nations to colonize land or interfere with states in North or South America would be viewed as acts of aggression")
         )
     );
 
@@ -93,6 +132,7 @@ public class TestQuerier {
             "at a time when nearly all Latin American colonies of Spain and Portugal had achieved or were at the point of gaining independence from the Portuguese Empire and Spanish Empire"
         )
     );
+
     verifyAnswers(graph, parser.parse("When was the doctrine published?"),
         Collections.singletonMap(
             "When",
@@ -163,7 +203,7 @@ public class TestQuerier {
 
     GraphQuerier querier = new GraphQuerier(data, comparator);
 
-    List<QueryResult> matches = querier.match(questionRoot);
+    Set<QueryResult> matches = querier.match(questionRoot);
     Collection<Map<String, String>> answerText = Collections2.transform(matches, new Function<QueryResult, Map<String, String>>() {
       @Override
       public Map<String, String> apply(QueryResult input) {
@@ -182,7 +222,7 @@ public class TestQuerier {
     for (QueryResult match : matches) {
       System.out.println();
       for (Entry<Node, Node> entry : match.getResolvedIndefinites().entrySet()) {
-        System.out.println(Node.getSentencePart(entry.getKey())+"->"+Node.getSentencePart(entry.getValue()));
+        System.out.println(Node.getSentencePart(entry.getKey()) + "->" + Node.getSentencePart(entry.getValue()));
       }
     }
 

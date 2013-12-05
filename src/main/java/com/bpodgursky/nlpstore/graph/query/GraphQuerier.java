@@ -5,10 +5,8 @@ import com.bpodgursky.nlpstore.graph.Entity;
 import com.bpodgursky.nlpstore.graph.KnowledgeGraph;
 import com.bpodgursky.nlpstore.graph.Node;
 import com.bpodgursky.nlpstore.graph.RefNode;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,31 +42,34 @@ public class GraphQuerier {
   private final KnowledgeGraph graph;
   private final NodeComparator nodeComparator;
 
+  private static final List<Voice> VOICES = Lists.newArrayList(
+      new ActiveVoice(), new PassiveVoice()
+  );
+
   public GraphQuerier(KnowledgeGraph graph, NodeComparator comparator) {
     this.graph = graph;
     this.nodeComparator = comparator;
   }
 
-  public List<QueryResult> match(Node questionRoot) throws Exception {
-    List<QueryResult> results = Lists.newArrayList();
+  public Set<QueryResult> match(Node questionRoot) throws Exception {
+    Set<QueryResult> results = Sets.newHashSet();
 
     for (Node root : graph.getRoots()) {
-      Map<Node, Node> indefinites = Maps.newHashMap();
-      if (resolveAllReferences(root, questionRoot, indefinites)) {
-        results.add(new QueryResult(indefinites, root));
+      for (Voice voice : VOICES) {
+        Map<Node, Node> indefinites = Maps.newHashMap();
+        if (resolveAllReferences(voice, root, questionRoot, indefinites)) {
+          results.add(new QueryResult(indefinites, root));
+        }
       }
     }
 
     return results;
   }
 
-  private boolean resolveAllReferences(Node data,
+  private boolean resolveAllReferences(Voice voice,
+                                       Node data,
                                        Node query,
                                        Map<Node, Node> resolvedIndefinites) throws Exception {
-    LOG.debug("\n");
-    LOG.debug("Comparing: ");
-    LOG.debug(data.toString());
-    LOG.debug(query.toString());
 
     Set<Node> nodesToExplore = Sets.newLinkedHashSet(Lists.newArrayList(data));
 
@@ -82,7 +83,7 @@ public class GraphQuerier {
 
     //  if any of the references match, consider it a success
     for (Node toExplore : nodesToExplore) {
-      if (exploreNode(toExplore, query, resolvedIndefinites)) {
+      if (exploreNode(voice, toExplore, query, resolvedIndefinites)) {
         return true;
       }
     }
@@ -90,14 +91,13 @@ public class GraphQuerier {
     return false;
   }
 
-  private boolean exploreNode(Node toExplore,
+  private boolean exploreNode(Voice voice,
+                              Node toExplore,
                               Node query,
                               Map<Node, Node> resolvedIndefinites) throws Exception {
-    if (matchStem(toExplore, query, resolvedIndefinites)) {
-      LOG.debug("Stems match");
+    if (matchStem(voice, toExplore, query, resolvedIndefinites)) {
       for (Edge edge : query.getOutgoingEdges()) {
-        if (!resolveEdge(edge, toExplore.getOutgoingEdges(), resolvedIndefinites)) {
-          LOG.debug("Cannot resolve edge stem: " + edge.getRelation());
+        if (!resolveEdge(voice, edge, toExplore.getOutgoingEdges(), resolvedIndefinites)) {
           return false;
         }
       }
@@ -107,7 +107,8 @@ public class GraphQuerier {
     return false;
   }
 
-  private boolean resolveEdge(Edge queryEdge,
+  private boolean resolveEdge(Voice voice,
+                              Edge queryEdge,
                               List<Edge> dataEdges,
                               Map<Node, Node> resolvedIndefinites) throws Exception {
 
@@ -118,18 +119,12 @@ public class GraphQuerier {
 
     for (Edge dataEdge : dataEdges) {
 
-      LOG.debug("Comparing edge: ");
-      LOG.debug(dataEdge.getRelation());
-      LOG.debug(queryEdge.getRelation());
+      if (voice.matches(dataEdge, queryEdge)) {
 
-      if (matchEdge(dataEdge, queryEdge)) {
-        if (resolveAllReferences(dataEdge.getTarget(),
+        if (resolveAllReferences(voice,
+            dataEdge.getTarget(),
             queryEdge.getTarget(),
             resolvedIndefinites)) {
-
-          LOG.debug("Comparing in edge: ");
-          LOG.debug(dataEdge.getTarget().toString());
-          LOG.debug(queryEdge.getTarget().toString());
 
           return true;
         }
@@ -138,34 +133,13 @@ public class GraphQuerier {
     return false;
   }
 
-  //  query - data
-  private static final Multimap<String, String> COMPATIBLE_CLAUSES = HashMultimap.create();
-
-  static {
-    COMPATIBLE_CLAUSES.put("direct object", "clausal complement");
-    COMPATIBLE_CLAUSES.put("attributive", "nominal subject");
-    COMPATIBLE_CLAUSES.put("adverbial modifier", "prepositional modifier");
-    COMPATIBLE_CLAUSES.put("dependent", "prepositional modifier");
-  }
-
-  private static boolean matchEdge(Edge dataEdge, Edge queryEdge) {
-    if (dataEdge.getRelation().equals(queryEdge.getRelation())) {
-      return true;
-    }
-
-    if (COMPATIBLE_CLAUSES.containsEntry(queryEdge.getRelation(), dataEdge.getRelation())) {
-      return true;
-    }
-
-    return false;
-  }
-
-  private boolean matchStem(Node data,
+  private boolean matchStem(Voice voice,
+                            Node data,
                             Node query,
                             Map<Node, Node> resolvedIndefinites) throws Exception {
 
     if (QUESTION_STEMS.contains(query.getStem().toUpperCase())) {
-      resolvedIndefinites.put(query, data);
+      resolvedIndefinites.put(query, voice.extractMatch(data));
       return true;
     }
 

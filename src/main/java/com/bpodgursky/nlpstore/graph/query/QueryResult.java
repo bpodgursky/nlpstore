@@ -29,4 +29,26 @@ public class QueryResult {
         ", matchingSentence=" + matchingSentence +
         '}';
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof QueryResult)) return false;
+
+    QueryResult that = (QueryResult) o;
+
+    if (matchingSentence != null ? !matchingSentence.equals(that.matchingSentence) : that.matchingSentence != null)
+      return false;
+    if (resolvedIndefinites != null ? !resolvedIndefinites.equals(that.resolvedIndefinites) : that.resolvedIndefinites != null)
+      return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = resolvedIndefinites != null ? resolvedIndefinites.hashCode() : 0;
+    result = 31 * result + (matchingSentence != null ? matchingSentence.hashCode() : 0);
+    return result;
+  }
 }
