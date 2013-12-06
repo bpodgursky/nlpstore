@@ -14,6 +14,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -56,6 +57,35 @@ public class TestQuerier {
     );
   }
 
+
+  //  Not handled well:
+
+  //  "WHERE",
+  //  "WHEN",
+  //  "WHY",
+  //  "HOW",
+  //  "WHICH",
+  //  "WHEREFORE",
+  //  "WHATEVER",
+
+  //  "WHOSE",
+  //  "WHEREWITH",
+  //  "WITHER",
+  //  "WHENCE"
+
+  //  Done, ish:
+
+  //  what
+  //  "WHOM",
+  //  "WHO",
+
+  private void writeDotFile(String method, KnowledgeGraph graph) throws IOException {
+    String dot = graph.toDotFile();
+    FileWriter fw = new FileWriter(method+".dot");
+    fw.append(dot);
+    fw.close();
+  }
+
   @Test
   public void testQuery() throws Exception {
 
@@ -79,16 +109,12 @@ public class TestQuerier {
     KnowledgeGraph graph = new KnowledgeGraph();
     parser.process(text, graph);
 
-    String dot = graph.toDotFile();
-    FileWriter fw = new FileWriter("output.dot");
-    fw.append(dot);
-    fw.close();
+    writeDotFile("doctrine", graph);
 
     //  TODO: time...
     //    "When was the term \"Monroe Doctrine\" coined?"
     //    "In what year was the term Monroe Doctrine coined?"
     //    "When was the term Monroe Doctrine coined?"
-
 
     verifyAnswers(graph, parser.parse("Who would invoke it?"),
         Collections.singletonMap(
@@ -182,6 +208,47 @@ public class TestQuerier {
 
   }
 
+  @Test
+  public void testWhere() throws Exception {
+
+    String text =
+        "The law school of Beirut was located in Beirut in classical antiquity for the study of Roman law. " +
+        "It flourished under the patronage of the Roman emperors and functioned as the Roman Empire's preeminent center of jurisprudence until its destruction in 551 CE. \n" +
+        "The law schools of the Roman Empire established organized repositories of imperial constitutions and institutionalized the study and practice of jurisprudence to relieve the busy imperial courts. " +
+        "The archiving of imperial constitutions facilitated the task of jurists in referring to legal precedents. " +
+        "The origins of the law school of Beirut are obscure. " +
+        "The earliest written mention of the school dates to 239 CE, when its reputation had already been established. " +
+        "The school attracted young, affluent Roman citizens, and its professors made major contributions to the Codex of Justinian. " +
+        "The school achieved such wide recognition throughout the Empire that Beirut was known as the \"Mother of Laws\". " +
+        "Beirut was one of the few schools allowed to continue teaching jurisprudence when Byzantine emperor Justinian I shut down other provincial law schools. \n" +
+        "The course of study at Beirut lasted for five years and consisted in the revision and analysis of classical juridic texts and imperial constitutions, in addition to case discussions. " +
+        "Justinian took a personal interest in the teaching process, charging the bishop of Beirut, the governor of Phoenicia Maritima and the teachers with discipline maintenance in the school. \n" +
+        "The school's facilities were destroyed in the aftermath of a massive earthquake that hit the Phoenician coastline. " +
+        "It moved to Sidon but did not survive the Arab conquest of 635 CE. " +
+        "Ancient texts attest that the school was located next to the ancient Anastasis church, vestiges of which lie beneath the Saint George Greek Orthodox Cathedral in Beirut's historic center. "+
+    "";
+
+    KnowledgeGraph graph = new KnowledgeGraph();
+    parser.process(text, graph);
+
+    writeDotFile("where", graph);
+
+    verifyAnswers(graph, parser.parse("Where did the school move?"),
+        Collections.singletonMap(
+            "where",
+            "to Sidon"
+        )
+    );
+
+
+    //  TODO "it was moved to Sidon"
+
+    //  TODO "The law school of Beirut was located where"
+
+    //  TODO "The law school of Beirut was a center located in Beirut in classical antiquity for the study of Roman law"
+  }
+
+
   private void verifyAnswers(KnowledgeGraph data,
                              Node questionRoot,
                              Map<String, String> answer) throws Exception {
@@ -243,4 +310,5 @@ public class TestQuerier {
     assertEquals(answers.size(), answerText.size());
 
   }
+
 }

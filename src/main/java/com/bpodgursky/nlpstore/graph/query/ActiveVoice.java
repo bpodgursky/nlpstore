@@ -5,6 +5,8 @@ import com.bpodgursky.nlpstore.graph.Node;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
+import java.util.Map.Entry;
+
 public class ActiveVoice implements Voice {
 
   //  query - data
@@ -15,6 +17,14 @@ public class ActiveVoice implements Voice {
     COMPATIBLE_CLAUSES.put("attributive", "nominal subject");
     COMPATIBLE_CLAUSES.put("adverbial modifier", "prepositional modifier");
     COMPATIBLE_CLAUSES.put("dependent", "prepositional modifier");
+    COMPATIBLE_CLAUSES.put("nominal subject", "nominal passive subject");
+
+    Multimap<String, String> toAdd = HashMultimap.create();
+    for (Entry<String, String> entry : COMPATIBLE_CLAUSES.entries()) {
+      toAdd.put(entry.getValue(), entry.getKey());
+    }
+
+    COMPATIBLE_CLAUSES.putAll(toAdd);
   }
 
   @Override
