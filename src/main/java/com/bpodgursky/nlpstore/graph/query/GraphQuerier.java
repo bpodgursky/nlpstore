@@ -1,5 +1,9 @@
 package com.bpodgursky.nlpstore.graph.query;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.bpodgursky.nlpstore.graph.Edge;
 import com.bpodgursky.nlpstore.graph.Entity;
 import com.bpodgursky.nlpstore.graph.KnowledgeGraph;
@@ -10,10 +14,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class GraphQuerier {
   private static final Logger LOG = LoggerFactory.getLogger(GraphQuerier.class);
@@ -117,6 +117,11 @@ public class GraphQuerier {
       return true;
     }
 
+    //  ?, etc
+    if(queryEdge.getRelation().equals("punctuation")){
+      return true;
+    }
+
     for (Edge dataEdge : dataEdges) {
 
       if (voice.matches(dataEdge, queryEdge)) {
@@ -130,6 +135,8 @@ public class GraphQuerier {
         }
       }
     }
+
+    System.out.println("failed to resolve: "+queryEdge);
     return false;
   }
 
@@ -138,8 +145,10 @@ public class GraphQuerier {
                             Node query,
                             Map<Node, Node> resolvedIndefinites) throws Exception {
 
+    System.out.println("query stem: "+query.getStem().toUpperCase());
     if (QUESTION_STEMS.contains(query.getStem().toUpperCase())) {
       resolvedIndefinites.put(query, voice.extractMatch(data));
+      System.out.println("inserted "+query+" -> "+voice.extractMatch(data));
       return true;
     }
 

@@ -1,10 +1,16 @@
 package com.bpodgursky.nlpstore.graph;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeMap;
+
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.stanford.nlp.dcoref.CorefChain;
-import edu.stanford.nlp.dcoref.CorefChain.CorefMention;
-import edu.stanford.nlp.dcoref.CorefCoreAnnotations;
+import edu.stanford.nlp.coref.CorefCoreAnnotations;
+import edu.stanford.nlp.coref.data.CorefChain;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.PartOfSpeechAnnotation;
@@ -17,20 +23,13 @@ import edu.stanford.nlp.semgraph.SemanticGraphEdge;
 import edu.stanford.nlp.util.CoreMap;
 import edu.stanford.nlp.util.IntPair;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeMap;
-
 public class NlpParser {
 
   private final StanfordCoreNLP pipeline;
 
   public NlpParser() {
     Properties props = new Properties();
-    props.put("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
+    props.put("annotators", "tokenize, ssplit, pos, lemma, ner, parse, mention, coref");
     pipeline = new StanfordCoreNLP(props);
   }
 
@@ -62,7 +61,7 @@ public class NlpParser {
       nodesByWord.put(vertex, new Node(vertex.word(), s, pos, sentenceText, vertex.index()));
     }
 
-    for (SemanticGraphEdge edge : semanticGraph.getEdgeSet()) {
+    for (SemanticGraphEdge edge : semanticGraph.edgeListSorted()) {
 
       Node source = nodesByWord.get(edge.getSource());
       Node target = nodesByWord.get(edge.getTarget());
@@ -119,7 +118,7 @@ public class NlpParser {
 
       indexToSentence.put(sentenceIndex, sentenceText);
       sentenceToOffset.put(sentenceIndex++, vertexSum);
-      vertexSum += (semanticGraph.vertexSet().size()+1);
+      vertexSum += (semanticGraph.vertexSet().size() + 1);
 
       for (IndexedWord vertex : semanticGraph.vertexSet()) {
         for (SemanticGraphEdge outEdge : semanticGraph.getOutEdgesSorted(vertex)) {
@@ -131,14 +130,14 @@ public class NlpParser {
       }
     }
 
-    Map<Integer, CorefChain> corefGraph = document.get(CorefCoreAnnotations.CorefChainAnnotation.class);
-
-    for (Entry<Integer, CorefChain> entry : corefGraph.entrySet()) {
+    for (CorefChain cc : document.get(CorefCoreAnnotations.CorefChainAnnotation.class).values()) {
 
       Set<RefNode> references = Sets.newHashSet();
 
-      for (Entry<IntPair, Set<CorefMention>> entry2 : entry.getValue().getMentionMap().entrySet()) {
-        for (CorefMention mention : entry2.getValue()) {
+      for (Entry<IntPair, Set<CorefChain.CorefMention>> entry2 : cc.getMentionMap().entrySet()) {
+
+
+        for (CorefChain.CorefMention mention : entry2.getValue()) {
 
           RefNode ref = new RefNode(mention.mentionSpan,
               indexToSentence.get(mention.sentNum),
@@ -147,12 +146,13 @@ public class NlpParser {
 
           references.add(ref);
           graph.addReference(ref);
-        }
-      }
 
+        }
+
+      }
       graph.merge(references, IdentitySource.COREFERENCE);
 
-    }
 
+    }
   }
 }

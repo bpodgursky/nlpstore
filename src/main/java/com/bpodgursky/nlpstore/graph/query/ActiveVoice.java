@@ -1,11 +1,11 @@
 package com.bpodgursky.nlpstore.graph.query;
 
+import java.util.Map.Entry;
+
 import com.bpodgursky.nlpstore.graph.Edge;
 import com.bpodgursky.nlpstore.graph.Node;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-
-import java.util.Map.Entry;
 
 public class ActiveVoice implements Voice {
 
@@ -16,6 +16,7 @@ public class ActiveVoice implements Voice {
     COMPATIBLE_CLAUSES.put("direct object", "clausal complement");
     COMPATIBLE_CLAUSES.put("attributive", "nominal subject");
     COMPATIBLE_CLAUSES.put("adverbial modifier", "prepositional modifier");
+    COMPATIBLE_CLAUSES.put("adverbial modifier", "nominal modifier");
     COMPATIBLE_CLAUSES.put("dependent", "prepositional modifier");
     COMPATIBLE_CLAUSES.put("nominal subject", "nominal passive subject");
 

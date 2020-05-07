@@ -1,5 +1,7 @@
 package com.bpodgursky.nlpstore.graph.query;
 
+import java.util.Map;
+
 import com.bpodgursky.nlpstore.graph.Node;
 import com.bpodgursky.nlpstore.script.EXTJWNLEx;
 import com.google.common.collect.Maps;
@@ -10,8 +12,6 @@ import net.sf.extjwnl.data.POS;
 import net.sf.extjwnl.data.Synset;
 import net.sf.extjwnl.data.Word;
 import net.sf.extjwnl.dictionary.Dictionary;
-
-import java.util.Map;
 
 public class ThesarusComparator implements NodeComparator {
 
@@ -67,6 +67,11 @@ public class ThesarusComparator implements NodeComparator {
 
     String dataLemma = data.getStem().toUpperCase();
     String queryLemma = query.getStem().toUpperCase();
+
+
+    System.out.println();
+    System.out.println("DATA LEMMA: "+dataLemma);
+    System.out.println("QUERY LEMMA: "+queryLemma);
 
     if(dataLemma.equals(queryLemma)){
       return true;

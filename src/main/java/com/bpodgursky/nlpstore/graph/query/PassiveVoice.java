@@ -1,7 +1,10 @@
 package com.bpodgursky.nlpstore.graph.query;
 
+import java.util.Set;
+
 import com.bpodgursky.nlpstore.graph.Edge;
 import com.bpodgursky.nlpstore.graph.Node;
+import com.google.common.collect.Sets;
 
 /**
  * This almost cetainly doesn't cover all cases, but can add to / clean up if else blocks below as more are uncovered
@@ -13,26 +16,33 @@ public class PassiveVoice implements Voice {
     return matchesInternal(dataEdge, queryEdge);
   }
 
+  private static Set<String> QUERY_PASSIVE = Sets.newHashSet(
+      "nominal subject",
+      "prepositional modifier",
+      "adverbial modifier"
+  );
+
+  private static Set<String> DATA_PASSIVE = Sets.newHashSet(
+      "prepositional modifier",
+      "nominal modifier",
+      "nominal subject"
+  );
+
   public static boolean matchesInternal(Edge dataEdge, Edge queryEdge){
 
     String dataRelation = dataEdge.getRelation();
     String queryRelation = queryEdge.getRelation();
 
-    if (dataRelation.equals("prepositional modifier")) {
-      if (dataEdge.getTarget().getToken().equals("by")) {
-        if (queryRelation.equals("nominal subject")) {
-          return true;
+    if(QUERY_PASSIVE.contains(queryRelation)){
+      if(DATA_PASSIVE.contains(dataRelation)){
+        Node target = dataEdge.getTarget();
+        for (Edge edge : target.getOutgoingEdges()) {
+          if(edge.getRelation().equals("case marker")) {
+            if (edge.getTarget().getToken().equals("by")) {
+              return true;
+            }
+          }
         }
-        return false;
-      }
-    }
-
-    if (dataRelation.equals("nominal subject")) {
-      if (queryEdge.getTarget().getToken().equals("by")) {
-        if (queryRelation.equals("prepositional modifier")) {
-          return true;
-        }
-        return false;
       }
     }
 
@@ -58,11 +68,6 @@ public class PassiveVoice implements Voice {
 
   @Override
   public Node extractMatch(Node answer) {
-    if(answer.getToken().equals("by")){
-      if(answer.getOutgoingEdges().size() == 1){
-        return answer.getOutgoingEdges().get(0).getTarget();
-      }
-    }
     return answer;
   }
 }
